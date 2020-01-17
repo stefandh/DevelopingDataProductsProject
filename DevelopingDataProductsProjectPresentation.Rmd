@@ -1,0 +1,158 @@
+---
+title: "Developing Data Products Project Presentation"
+author: "Stefan D. Huebner"
+date: "1/16/2020"
+output: 
+  ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Introduction
+
+This is for Coursera's Developing Data Products Course Project. You can use a slider to choose a maximum and minimum population and on a map the countries within that range will be highlighted. You can also hover over a country to see more detailed information.
+
+App Link: https://tarski.shinyapps.io/DevelopingDataProductsProject/
+
+GitHub Link: https://github.com/stefandh/DevelopingDataProductsProject
+
+## ui.R Code
+
+<style>
+slides > slide {
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+}
+</style>
+
+```{r, echo = TRUE, eval = FALSE}
+# load shiny
+library(shiny)
+
+# define UI for application
+shinyUI(fluidPage(
+    titlePanel("Population of Countries"),
+    sidebarLayout(
+        sidebarPanel(
+            h3("Pick a Population Range"),
+            h4("Use the slider to choose a maximum and minimum population 
+               and the countries within that range will be highlighted. 
+               You can hover over a country to see more detailed information."),
+            sliderInput("population",
+                        "people",
+                        min = 0,
+                        max = 1400000000,
+                        value = c(0, 1400000000)),
+        ),
+        
+        
+        mainPanel(
+            htmlOutput("plot1")
+        )
+    )
+))
+```
+
+## server.R Code
+
+<style>
+slides > slide {
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+}
+</style>
+
+```{r, echo = TRUE, eval = FALSE}
+# load required packages and data
+library(shiny)
+library(dplyr)
+suppressPackageStartupMessages(library(googleVis))
+data(Population)
+
+# build dataframe for creating plot
+countries <- data.frame(Population$Country, Population$Population,
+                        hover = paste0(Population$Country, ": ",
+                                       formatC(Population$Population, big.mark = ","), " people ",
+                                       "(Rank ", Population$Rank, ")", "; ",
+                                       Population$`% of World Population`*100, "% of World Population"),
+                        check.names = FALSE)
+countries$hover <- as.character(countries$hover)
+
+# define server logic required to draw the plot
+shinyServer(function(input, output) {
+    
+    output$plot1 <- renderGvis({
+        
+        # rename slider values
+        minpop <- input$population[1]
+        maxpop <- input$population[2]
+        
+        # filter data using slider input
+        plotdata <- countries %>% 
+            filter(Population$Population>minpop, Population$Population<maxpop)
+        
+        # plot map
+        gvisGeoChart(plotdata, 
+                     locationvar="Population$Country", hovervar="hover",
+                     options=list(width=800, height=600))
+        
+    })
+    
+})
+```
+
+## Example Output
+```{r}
+suppressPackageStartupMessages(library(shiny))
+suppressPackageStartupMessages(library(dplyr))
+suppressMessages(suppressWarnings(suppressPackageStartupMessages(library(googleVis))))
+data(Population)
+
+countries <- data.frame(Population$Country, Population$Population,
+                        hover = paste0(Population$Country, ": ",
+                                       formatC(Population$Population, big.mark = ","), " people ",
+                                       "(Rank ", Population$Rank, ")", "; ",
+                                       Population$`% of World Population`*100, "% of World Population"),
+                        check.names = FALSE)
+countries$hover <- as.character(countries$hover)
+
+shinyApp(
+  
+  ui = fluidPage(
+    titlePanel("Population of Countries"),
+    sidebarLayout(
+        sidebarPanel(
+            h3("Pick a Population Range"),
+            h4("Use the slider to choose a maximum and minimum population 
+               and the countries within that range will be highlighted. 
+               You can hover over a country to see more detailed information."),
+            sliderInput("population",
+                        "people",
+                        min = 0,
+                        max = 1400000000,
+                        value = c(0, 1400000000)),
+        ),
+        mainPanel(
+            htmlOutput("plot1")
+        )
+    )
+  ),
+  
+  server = function(input,output) {
+    output$plot1 <- renderGvis({
+        minpop <- input$population[1]
+        maxpop <- input$population[2]
+        plotdata <- countries %>% 
+            filter(Population$Population>minpop, Population$Population<maxpop)
+        gvisGeoChart(plotdata, 
+                     locationvar="Population$Country", hovervar="hover")
+    })
+    
+  },
+  
+  options = list(height = 500)
+  
+)
+```
